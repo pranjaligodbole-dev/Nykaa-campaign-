@@ -14,7 +14,6 @@ let flag;
 let gameState = "start";
 let selectedAvatar = 0;
 
-// movement flags (tap-based)
 let moveLeft = false;
 let moveRight = false;
 
@@ -31,17 +30,14 @@ function setup() {
     onGround: false
   };
 
-  // platforms
   platforms.push({x:0,y:420,w:worldWidth,h:30});
   platforms.push({x:200,y:330,w:150,h:20});
   platforms.push({x:450,y:270,w:150,h:20});
   platforms.push({x:700,y:210,w:150,h:20});
 
-  // ingredients
   ingredients.push({x:230,baseY:300,offset:0});
   ingredients.push({x:500,baseY:240,offset:50});
 
-  // obstacles
   obstacles.push({x:600,baseY:390,offset:0});
   obstacles.push({x:900,baseY:250,offset:60});
 
@@ -75,53 +71,52 @@ function draw() {
   drawControls();
 }
 
-// INPUT (CLEAN + RELIABLE)
-function mousePressed(){
+// ✅ TOUCH INPUT (FIXED PROPERLY)
+function touchStarted(){
 
-  // start → avatar
+  let tx = touches[0].x;
+
   if(gameState === "start"){
     gameState = "avatar";
-    return;
+    return false;
   }
 
-  // avatar select
   if(gameState === "avatar"){
-    if(mouseX < width/3) selectedAvatar = 1;
-    else if(mouseX < width*2/3) selectedAvatar = 2;
+    if(tx < width/3) selectedAvatar = 1;
+    else if(tx < width*2/3) selectedAvatar = 2;
     else selectedAvatar = 3;
 
     gameState = "play";
-    return;
+    return false;
   }
 
-  // gameplay taps
   if(gameState === "play"){
 
-    // LEFT ZONE
-    if(mouseX < width/3){
+    if(tx < width/3){
       moveLeft = true;
     }
-
-    // RIGHT ZONE
-    else if(mouseX > width*2/3){
+    else if(tx > width*2/3){
       moveRight = true;
     }
-
-    // CENTER = JUMP
-    else if(player.onGround){
-      player.velY = jumpForce;
-      player.onGround = false;
+    else{
+      if(player.onGround){
+        player.velY = jumpForce;
+        player.onGround = false;
+      }
     }
   }
 
   if(gameState === "end"){
     location.reload();
   }
+
+  return false;
 }
 
-function mouseReleased(){
+function touchEnded(){
   moveLeft = false;
   moveRight = false;
+  return false;
 }
 
 // MOVEMENT
@@ -145,7 +140,7 @@ function checkPlatforms(){
     if(player.x + player.w > p.x &&
        player.x < p.x + p.w &&
        player.y + player.h > p.y &&
-       player.y + player.h < p.y + 15 &&
+       player.y + player.h < p.y + 20 &&
        player.velY >= 0){
 
         player.y = p.y - player.h;
