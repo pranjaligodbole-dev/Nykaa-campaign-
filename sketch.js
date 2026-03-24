@@ -16,9 +16,6 @@ let collectedTypes = [];
 
 let selectedAvatar = 0;
 
-// MOBILE
-let isMobile = /Mobi|Android/i.test(navigator.userAgent);
-
 // JOYSTICK
 let joystick = { x: 100, y: 350, r: 40, active: false, dx: 0 };
 
@@ -26,11 +23,7 @@ let joystick = { x: 100, y: 350, r: 40, active: false, dx: 0 };
 let jumpButton = { x: 700, y: 350, r: 35 };
 
 function setup() {
-
-  // ✅ LANDSCAPE FIX
-  let w = max(window.innerWidth, window.innerHeight);
-  let h = min(window.innerWidth, window.innerHeight);
-  createCanvas(w, h);
+  createCanvas(window.innerWidth, window.innerHeight);
 
   player = {
     x: 100,
@@ -42,6 +35,7 @@ function setup() {
     onGround: false
   };
 
+  // Platforms
   platforms.push({x:0,y:420,w:worldWidth,h:30});
   platforms.push({x:200,y:330,w:150,h:20});
   platforms.push({x:450,y:270,w:150,h:20});
@@ -50,11 +44,13 @@ function setup() {
   platforms.push({x:1300,y:260,w:150,h:20});
   platforms.push({x:1600,y:200,w:150,h:20});
 
+  // Ingredients
   ingredients.push({x:230,baseY:300,type:"vitc",offset:0});
   ingredients.push({x:500,baseY:240,type:"hyaluronic",offset:50});
   ingredients.push({x:730,baseY:180,type:"niacinamide",offset:100});
   ingredients.push({x:1050,baseY:290,type:"spf",offset:150});
 
+  // Obstacles
   obstacles.push({x:600,w:40,h:30,baseY:390,offset:0,type:"pollution"});
   obstacles.push({x:900,w:30,h:50,baseY:250,offset:60,type:"uv"});
 
@@ -62,9 +58,7 @@ function setup() {
 }
 
 function windowResized(){
-  let w = max(window.innerWidth, window.innerHeight);
-  let h = min(window.innerWidth, window.innerHeight);
-  resizeCanvas(w, h);
+  resizeCanvas(window.innerWidth, window.innerHeight);
 }
 
 function draw() {
@@ -76,6 +70,7 @@ function draw() {
 
   updateCamera();
 
+  // Responsive controls
   joystick.x = 100;
   joystick.y = height - 80;
 
@@ -100,59 +95,67 @@ function draw() {
   drawControls();
 }
 
-// ✅ FIXED TOUCH
-function touchStarted(){
+function mousePressed(){
 
-  let tx = touches[0].x;
-  let ty = touches[0].y;
-
+  // START → AVATAR
   if(gameState === "start"){
     gameState = "avatar";
     return;
   }
 
+  // AVATAR SELECTION (FULL WIDTH ZONES)
   if(gameState === "avatar"){
-    if(tx < width/3) selectedAvatar = 1;
-    else if(tx < width*2/3) selectedAvatar = 2;
-    else selectedAvatar = 3;
+
+    if(mouseX < width/3){
+      selectedAvatar = 1;
+    }
+    else if(mouseX < (2 * width) / 3){
+      selectedAvatar = 2;
+    }
+    else{
+      selectedAvatar = 3;
+    }
 
     gameState = "play";
     return;
   }
 
+  // GAMEPLAY
   if(gameState === "play"){
-    let d = dist(tx, ty, joystick.x, joystick.y);
-    if(d < joystick.r) joystick.active = true;
 
-    let jd = dist(tx, ty, jumpButton.x, jumpButton.y);
+    let d = dist(mouseX, mouseY, joystick.x, joystick.y);
+    if(d < joystick.r){
+      joystick.active = true;
+    }
+
+    let jd = dist(mouseX, mouseY, jumpButton.x, jumpButton.y);
     if(jd < jumpButton.r && player.onGround){
       player.velY = jumpForce;
       player.onGround = false;
     }
   }
 
+  // END
   if(gameState === "end"){
     location.reload();
   }
 }
 
-function touchMoved(){
+function mouseDragged(){
   if(joystick.active){
-    joystick.dx = touches[0].x - joystick.x;
+    joystick.dx = mouseX - joystick.x;
   }
 }
 
-function touchEnded(){
+function mouseReleased(){
   joystick.active = false;
   joystick.dx = 0;
 }
 
 function movePlayer(){
-  if(isMobile){
-    if(joystick.dx < -10) player.velX = -5;
-    else if(joystick.dx > 10) player.velX = 5;
-    else player.velX = 0;
-  }
+  if(joystick.dx < -10) player.velX = -5;
+  else if(joystick.dx > 10) player.velX = 5;
+  else player.velX = 0;
 }
 
 function applyPhysics(){
@@ -213,6 +216,7 @@ function drawObstacles(){
 
     o.y = o.baseY + sin(frameCount*speed+o.offset)*range;
 
+    fill(o.type==="uv"?'yellow':150);
     rect(o.x,o.y,o.w,o.h);
 
     if(player.x < o.x + o.w &&
@@ -234,6 +238,7 @@ function drawFlag(){
   }
 }
 
+// UI
 function drawStartScreen(){
   textAlign(CENTER,CENTER);
   fill(255);
@@ -244,14 +249,27 @@ function drawStartScreen(){
 }
 
 function drawAvatarScreen(){
+
   textAlign(CENTER,CENTER);
   fill(255);
   textSize(24);
-  text("Choose Avatar", width/2, 100);
+  text("Choose Avatar", width/2, 80);
 
-  rect(width/6,200,50,60);
-  rect(width/2-25,200,50,60);
-  rect(width*5/6-25,200,50,60);
+  noStroke();
+
+  fill(255,100,150);
+  rect(0, 150, width/3, 200);
+
+  fill(100,200,255);
+  rect(width/3, 150, width/3, 200);
+
+  fill(180,255,120);
+  rect((2*width)/3, 150, width/3, 200);
+
+  fill(255);
+  text("1", width/6, 250);
+  text("2", width/2, 250);
+  text("3", (5*width)/6, 250);
 }
 
 function drawEndScreen(){
@@ -265,7 +283,6 @@ function drawEndScreen(){
 }
 
 function drawControls(){
-  if(!isMobile) return;
 
   fill(255,50);
   ellipse(joystick.x, joystick.y, joystick.r*2);
