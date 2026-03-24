@@ -26,7 +26,11 @@ let joystick = { x: 100, y: 350, r: 40, active: false, dx: 0 };
 let jumpButton = { x: 700, y: 350, r: 35 };
 
 function setup() {
-  createCanvas(window.innerWidth, window.innerHeight);
+
+  // ✅ LANDSCAPE FIX
+  let w = max(window.innerWidth, window.innerHeight);
+  let h = min(window.innerWidth, window.innerHeight);
+  createCanvas(w, h);
 
   player = {
     x: 100,
@@ -50,18 +54,17 @@ function setup() {
   ingredients.push({x:500,baseY:240,type:"hyaluronic",offset:50});
   ingredients.push({x:730,baseY:180,type:"niacinamide",offset:100});
   ingredients.push({x:1050,baseY:290,type:"spf",offset:150});
-  ingredients.push({x:1330,baseY:230,type:"vitc",offset:200});
-  ingredients.push({x:1630,baseY:170,type:"hyaluronic",offset:250});
 
   obstacles.push({x:600,w:40,h:30,baseY:390,offset:0,type:"pollution"});
   obstacles.push({x:900,w:30,h:50,baseY:250,offset:60,type:"uv"});
-  obstacles.push({x:1200,w:40,h:30,baseY:390,offset:120,type:"pollution"});
 
   flag = {x:1850,y:360,w:20,h:60};
 }
 
 function windowResized(){
-  resizeCanvas(window.innerWidth, window.innerHeight);
+  let w = max(window.innerWidth, window.innerHeight);
+  let h = min(window.innerWidth, window.innerHeight);
+  resizeCanvas(w, h);
 }
 
 function draw() {
@@ -97,8 +100,11 @@ function draw() {
   drawControls();
 }
 
-// TOUCH (FIXED)
+// ✅ FIXED TOUCH
 function touchStarted(){
+
+  let tx = touches[0].x;
+  let ty = touches[0].y;
 
   if(gameState === "start"){
     gameState = "avatar";
@@ -106,8 +112,8 @@ function touchStarted(){
   }
 
   if(gameState === "avatar"){
-    if(touchX < width/3) selectedAvatar = 1;
-    else if(touchX < width*2/3) selectedAvatar = 2;
+    if(tx < width/3) selectedAvatar = 1;
+    else if(tx < width*2/3) selectedAvatar = 2;
     else selectedAvatar = 3;
 
     gameState = "play";
@@ -115,10 +121,10 @@ function touchStarted(){
   }
 
   if(gameState === "play"){
-    let d = dist(touchX, touchY, joystick.x, joystick.y);
+    let d = dist(tx, ty, joystick.x, joystick.y);
     if(d < joystick.r) joystick.active = true;
 
-    let jd = dist(touchX, touchY, jumpButton.x, jumpButton.y);
+    let jd = dist(tx, ty, jumpButton.x, jumpButton.y);
     if(jd < jumpButton.r && player.onGround){
       player.velY = jumpForce;
       player.onGround = false;
@@ -132,7 +138,7 @@ function touchStarted(){
 
 function touchMoved(){
   if(joystick.active){
-    joystick.dx = touchX - joystick.x;
+    joystick.dx = touches[0].x - joystick.x;
   }
 }
 
@@ -153,7 +159,6 @@ function applyPhysics(){
   player.velY += gravity;
   player.x += player.velX;
   player.y += player.velY;
-  player.x = constrain(player.x,0,worldWidth-player.w);
 }
 
 function checkPlatforms(){
@@ -196,7 +201,6 @@ function drawIngredients(){
     ellipse(ing.x, ing.y, 18);
 
     if(dist(player.x+15,player.y+20,ing.x,ing.y)<20){
-      collectedTypes.push(ing.type);
       ingredients.splice(i,1);
     }
   }
@@ -209,7 +213,6 @@ function drawObstacles(){
 
     o.y = o.baseY + sin(frameCount*speed+o.offset)*range;
 
-    fill(o.type==="uv"?'yellow':150);
     rect(o.x,o.y,o.w,o.h);
 
     if(player.x < o.x + o.w &&
