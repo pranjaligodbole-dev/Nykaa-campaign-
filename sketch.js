@@ -12,15 +12,11 @@ let cameraX = 0;
 let flag;
 
 let gameState = "start";
-let collectedTypes = [];
-
 let selectedAvatar = 0;
 
-// JOYSTICK
-let joystick = { x: 100, y: 350, r: 40, active: false, dx: 0 };
-
-// JUMP BUTTON
-let jumpButton = { x: 700, y: 350, r: 35 };
+// movement flags (tap-based)
+let moveLeft = false;
+let moveRight = false;
 
 function setup() {
   createCanvas(window.innerWidth, window.innerHeight);
@@ -35,47 +31,31 @@ function setup() {
     onGround: false
   };
 
-  // Platforms
+  // platforms
   platforms.push({x:0,y:420,w:worldWidth,h:30});
   platforms.push({x:200,y:330,w:150,h:20});
   platforms.push({x:450,y:270,w:150,h:20});
   platforms.push({x:700,y:210,w:150,h:20});
-  platforms.push({x:1000,y:320,w:150,h:20});
-  platforms.push({x:1300,y:260,w:150,h:20});
-  platforms.push({x:1600,y:200,w:150,h:20});
 
-  // Ingredients
-  ingredients.push({x:230,baseY:300,type:"vitc",offset:0});
-  ingredients.push({x:500,baseY:240,type:"hyaluronic",offset:50});
-  ingredients.push({x:730,baseY:180,type:"niacinamide",offset:100});
-  ingredients.push({x:1050,baseY:290,type:"spf",offset:150});
+  // ingredients
+  ingredients.push({x:230,baseY:300,offset:0});
+  ingredients.push({x:500,baseY:240,offset:50});
 
-  // Obstacles
-  obstacles.push({x:600,w:40,h:30,baseY:390,offset:0,type:"pollution"});
-  obstacles.push({x:900,w:30,h:50,baseY:250,offset:60,type:"uv"});
+  // obstacles
+  obstacles.push({x:600,baseY:390,offset:0});
+  obstacles.push({x:900,baseY:250,offset:60});
 
-  flag = {x:1850,y:360,w:20,h:60};
-}
-
-function windowResized(){
-  resizeCanvas(window.innerWidth, window.innerHeight);
+  flag = {x:1200,y:360,w:20,h:60};
 }
 
 function draw() {
   background(30);
 
-  if(gameState === "start"){ drawStartScreen(); return; }
-  if(gameState === "avatar"){ drawAvatarScreen(); return; }
-  if(gameState === "end"){ drawEndScreen(); return; }
+  if(gameState === "start"){ drawStart(); return; }
+  if(gameState === "avatar"){ drawAvatar(); return; }
+  if(gameState === "end"){ drawEnd(); return; }
 
   updateCamera();
-
-  // Responsive controls
-  joystick.x = 100;
-  joystick.y = height - 80;
-
-  jumpButton.x = width - 100;
-  jumpButton.y = height - 80;
 
   push();
   translate(-cameraX,0);
@@ -95,69 +75,63 @@ function draw() {
   drawControls();
 }
 
+// INPUT (CLEAN + RELIABLE)
 function mousePressed(){
 
-  // START → AVATAR
+  // start → avatar
   if(gameState === "start"){
     gameState = "avatar";
     return;
   }
 
-  // AVATAR SELECTION (FULL WIDTH ZONES)
+  // avatar select
   if(gameState === "avatar"){
-
-    if(mouseX < width/3){
-      selectedAvatar = 1;
-    }
-    else if(mouseX < (2 * width) / 3){
-      selectedAvatar = 2;
-    }
-    else{
-      selectedAvatar = 3;
-    }
+    if(mouseX < width/3) selectedAvatar = 1;
+    else if(mouseX < width*2/3) selectedAvatar = 2;
+    else selectedAvatar = 3;
 
     gameState = "play";
     return;
   }
 
-  // GAMEPLAY
+  // gameplay taps
   if(gameState === "play"){
 
-    let d = dist(mouseX, mouseY, joystick.x, joystick.y);
-    if(d < joystick.r){
-      joystick.active = true;
+    // LEFT ZONE
+    if(mouseX < width/3){
+      moveLeft = true;
     }
 
-    let jd = dist(mouseX, mouseY, jumpButton.x, jumpButton.y);
-    if(jd < jumpButton.r && player.onGround){
+    // RIGHT ZONE
+    else if(mouseX > width*2/3){
+      moveRight = true;
+    }
+
+    // CENTER = JUMP
+    else if(player.onGround){
       player.velY = jumpForce;
       player.onGround = false;
     }
   }
 
-  // END
   if(gameState === "end"){
     location.reload();
   }
 }
 
-function mouseDragged(){
-  if(joystick.active){
-    joystick.dx = mouseX - joystick.x;
-  }
-}
-
 function mouseReleased(){
-  joystick.active = false;
-  joystick.dx = 0;
+  moveLeft = false;
+  moveRight = false;
 }
 
+// MOVEMENT
 function movePlayer(){
-  if(joystick.dx < -10) player.velX = -5;
-  else if(joystick.dx > 10) player.velX = 5;
+  if(moveLeft) player.velX = -5;
+  else if(moveRight) player.velX = 5;
   else player.velX = 0;
 }
 
+// PHYSICS
 function applyPhysics(){
   player.velY += gravity;
   player.x += player.velX;
@@ -186,6 +160,7 @@ function updateCamera(){
   cameraX = constrain(cameraX,0,worldWidth-width);
 }
 
+// DRAW
 function drawPlayer(){
   fill(selectedAvatar===1?'pink':selectedAvatar===2?'cyan':'lightgreen');
   rect(player.x,player.y,player.w,player.h);
@@ -193,17 +168,19 @@ function drawPlayer(){
 
 function drawPlatforms(){
   fill(120);
-  for(let p of platforms) rect(p.x,p.y,p.w,p.h);
+  for(let p of platforms){
+    rect(p.x,p.y,p.w,p.h);
+  }
 }
 
 function drawIngredients(){
   for(let i=ingredients.length-1;i>=0;i--){
     let ing = ingredients[i];
-    ing.y = ing.baseY + sin(frameCount*0.05+ing.offset)*10;
+    let y = ing.baseY + sin(frameCount*0.05+ing.offset)*10;
 
-    ellipse(ing.x, ing.y, 18);
+    ellipse(ing.x,y,15);
 
-    if(dist(player.x+15,player.y+20,ing.x,ing.y)<20){
+    if(dist(player.x,player.y,ing.x,y)<20){
       ingredients.splice(i,1);
     }
   }
@@ -211,18 +188,14 @@ function drawIngredients(){
 
 function drawObstacles(){
   for(let o of obstacles){
-    let speed = o.type==="uv"?0.08:0.04;
-    let range = o.type==="uv"?40:25;
+    let y = o.baseY + sin(frameCount*0.04+o.offset)*20;
 
-    o.y = o.baseY + sin(frameCount*speed+o.offset)*range;
+    rect(o.x,y,30,30);
 
-    fill(o.type==="uv"?'yellow':150);
-    rect(o.x,o.y,o.w,o.h);
-
-    if(player.x < o.x + o.w &&
-       player.x + player.w > o.x &&
-       player.y < o.y + o.h &&
-       player.y + player.h > o.y){
+    if(player.x < o.x+30 &&
+       player.x+player.w > o.x &&
+       player.y < y+30 &&
+       player.y+player.h > y){
         gameState = "end";
     }
   }
@@ -231,69 +204,50 @@ function drawObstacles(){
 function drawFlag(){
   rect(flag.x,flag.y,flag.w,flag.h);
 
-  if(player.x + player.w > flag.x &&
-     player.x < flag.x + flag.w &&
-     player.y + player.h > flag.y){
-       gameState = "end";
+  if(player.x > flag.x){
+    gameState = "end";
   }
 }
 
 // UI
-function drawStartScreen(){
-  textAlign(CENTER,CENTER);
+function drawStart(){
   fill(255);
-  textSize(32);
-  text("Nykaa SkinQuest", width/2, height/2);
+  textAlign(CENTER,CENTER);
+  textSize(30);
+  text("Nykaa SkinQuest", width/2,height/2);
   textSize(16);
-  text("Tap to start", width/2, height/2+40);
+  text("Tap to start", width/2,height/2+40);
 }
 
-function drawAvatarScreen(){
-
-  textAlign(CENTER,CENTER);
+function drawAvatar(){
   fill(255);
-  textSize(24);
-  text("Choose Avatar", width/2, 80);
-
-  noStroke();
+  textAlign(CENTER,CENTER);
+  text("Choose Avatar", width/2,100);
 
   fill(255,100,150);
-  rect(0, 150, width/3, 200);
+  rect(0,150,width/3,200);
 
   fill(100,200,255);
-  rect(width/3, 150, width/3, 200);
+  rect(width/3,150,width/3,200);
 
   fill(180,255,120);
-  rect((2*width)/3, 150, width/3, 200);
-
-  fill(255);
-  text("1", width/6, 250);
-  text("2", width/2, 250);
-  text("3", (5*width)/6, 250);
+  rect(width*2/3,150,width/3,200);
 }
 
-function drawEndScreen(){
-  background(20);
-  textAlign(CENTER,CENTER);
+function drawEnd(){
   fill(255);
-  textSize(28);
-  text("Perfect Bundle Unlocked ✨", width/2, height/2);
-  textSize(16);
-  text("Tap to Restart", width/2, height/2+40);
+  textAlign(CENTER,CENTER);
+  text("Perfect Bundle Unlocked ✨", width/2,height/2);
+  text("Tap to restart", width/2,height/2+40);
 }
 
 function drawControls(){
-
   fill(255,50);
-  ellipse(joystick.x, joystick.y, joystick.r*2);
+  rect(0,height-80,width/3,80);
+  rect(width*2/3,height-80,width/3,80);
 
   fill(255);
-  ellipse(joystick.x + joystick.dx*0.3, joystick.y, 20);
-
-  fill(255,80);
-  ellipse(jumpButton.x, jumpButton.y, jumpButton.r*2);
-
-  fill(0);
   textAlign(CENTER,CENTER);
-  text("↑", jumpButton.x, jumpButton.y);
+  text("<",width/6,height-40);
+  text(">",width*5/6,height-40);
 }
