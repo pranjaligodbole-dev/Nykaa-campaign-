@@ -1,23 +1,22 @@
 let player;
 let gravity = 0.8;
-let jumpForce = -12;
+let jumpForce = -15;
 
 let platforms = [];
-let ingredients = [];
-let obstacles = [];
+let products = [];
+let slots = [null, null, null];
+
+let worldWidth = 2000;
+let cameraX = 0;
 
 let gameState = "start";
-let selectedAvatar = 0;
 
 let moveLeft = false;
 let moveRight = false;
-
-// FIXED LANDSCAPE SIZE
-let gameWidth = 800;
-let gameHeight = 450;
+let lastTap = 0;
 
 function setup() {
-  createCanvas(gameWidth, gameHeight);
+  createCanvas(windowWidth, windowHeight * 0.6);
 
   player = {
     x: 100,
@@ -29,131 +28,251 @@ function setup() {
     onGround: false
   };
 
-  platforms.push({x:0,y:420,w:800,h:30});
-  platforms.push({x:200,y:330,w:150,h:20});
-  platforms.push({x:450,y:270,w:150,h:20});
+  // Ground
+  platforms.push({x:0,y:height-30,w:worldWidth,h:30});
 
-  ingredients.push({x:230,y:300});
-  ingredients.push({x:500,y:240});
+  // Platforms
+  platforms.push({x:200,y:height-120,w:150,h:20});
+  platforms.push({x:450,y:height-180,w:150,h:20});
+  platforms.push({x:700,y:height-240,w:150,h:20});
+  platforms.push({x:1000,y:height-130,w:150,h:20});
+  platforms.push({x:1300,y:height-190,w:150,h:20});
+  platforms.push({x:1600,y:height-250,w:150,h:20});
 
-  obstacles.push({x:600,y:390});
+  // Makeup products
+  products = [
+    {x:230,y:height-150,label:"Primer"},
+    {x:500,y:height-210,label:"Foundation"},
+    {x:730,y:height-270,label:"Concealer"},
+    {x:1050,y:height-160,label:"Blush"},
+    {x:1330,y:height-220,label:"Mascara"},
+    {x:1630,y:height-280,label:"Lipstick"}
+  ];
 }
 
 function draw() {
 
-  // CENTER CANVAS (LANDSCAPE EFFECT)
-  let offsetX = (window.innerWidth - gameWidth)/2;
-  let offsetY = (window.innerHeight - gameHeight)/2;
-  translate(offsetX, offsetY);
+  if(gameState === "start"){
+    drawStartScreen();
+    return;
+  }
+
+  if(gameState === "end"){
+    drawEndScreen();
+    return;
+  }
 
   background(30);
 
-  if(gameState === "start"){ drawStart(); return; }
-  if(gameState === "avatar"){ drawAvatar(); return; }
-  if(gameState === "play"){ drawGame(); return; }
-  if(gameState === "end"){ drawEnd(); return; }
-}
+  updateCamera();
 
-function drawGame(){
+  push();
+  translate(-cameraX,0);
 
   movePlayer();
   applyPhysics();
   checkPlatforms();
 
   drawPlatforms();
-  drawIngredients();
-  drawObstacles();
+  drawProducts();
   drawPlayer();
 
+  pop();
+
+  drawSlots();
   drawControls();
+
+  if(!slots.includes(null)){
+    gameState = "end";
+  }
 }
 
-// INPUT (STABLE)
-function touchStarted(){
+function drawStartScreen(){
+  background(255,240,245);
 
-  let tx = touches[0].x;
-  let ty = touches[0].y;
+  textAlign(CENTER,CENTER);
 
-  // adjust for centered canvas
-  tx -= (window.innerWidth - gameWidth)/2;
-  ty -= (window.innerHeight - gameHeight)/2;
+  fill(0);
+  textSize(32);
+  text("Build Your Makeup Kit ✨", width/2, height/2 - 40);
 
-  if(gameState === "start"){
-    gameState = "avatar";
-    return false;
-  }
+  textSize(18);
+  text("Collect any 3 products", width/2, height/2);
 
-  if(gameState === "avatar"){
-    if(tx < gameWidth/3) selectedAvatar = 1;
-    else if(tx < gameWidth*2/3) selectedAvatar = 2;
-    else selectedAvatar = 3;
+  fill(255,0,120);
+  rect(width/2 - 80, height/2 + 40, 160, 50, 10);
 
-    gameState = "play";
-    return false;
-  }
-
-  if(gameState === "play"){
-
-    if(tx < gameWidth/3){
-      moveLeft = true;
-    }
-    else if(tx > gameWidth*2/3){
-      moveRight = true;
-    }
-    else if(player.onGround){
-      player.velY = jumpForce;
-      player.onGround = false;
-    }
-  }
-
-  if(gameState === "end"){
-    location.reload();
-  }
-
-  return false;
+  fill(255);
+  text("Tap to Play", width/2, height/2 + 65);
 }
 
-function touchEnded(){
-  moveLeft = false;
-  moveRight = false;
+function drawEndScreen(){
+  background(255,240,245);
+
+  textAlign(CENTER);
+
+  fill(0);
+  textSize(28);
+  text("Your Makeup Kit ✨", width/2, 100);
+
+  let spacing = 110;
+  let totalWidth = spacing * (slots.length - 1);
+  let startX = width/2 - totalWidth/2;
+
+  for(let i=0;i<slots.length;i++){
+    let x = startX + i * spacing;
+    let y = height/2 - 40;
+
+    fill(255);
+    rect(x,y,90,90,15);
+
+    if(slots[i]){
+      fill(0);
+      textSize(12);
+      text(slots[i].label,x+45,y+50);
+    }
+  }
+
+  fill(255,0,120);
+  textSize(22);
+  text("20% OFF UNLOCKED", width/2, height/2 + 100);
+
+  fill(0);
+  textSize(18);
+  text("CODE: NYKAA20", width/2, height/2 + 140);
+
+  textSize(14);
+  text("Tap to restart", width/2, height/2 + 180);
 }
 
-// MOVEMENT
+function drawProducts(){
+  for(let p of products){
+
+    if(p.collected) continue;
+
+    fill(255,220,235);
+    rect(p.x-20,p.y-20,60,60,10);
+
+    fill(0);
+    textSize(10);
+    textAlign(CENTER);
+    text(p.label,p.x+10,p.y+5);
+
+    let d = dist(player.x+15,player.y+20,p.x,p.y);
+
+    if(d < 30 && player.onGround){
+      collectProduct(p);
+    }
+  }
+}
+
+function collectProduct(p){
+  if(p.collected) return;
+
+  let index = slots.indexOf(null);
+
+  if(index !== -1){
+    slots[index] = p;
+    p.collected = true;
+  }
+}
+
+function drawSlots(){
+
+  let spacing = 70;
+  let totalWidth = spacing * (slots.length - 1);
+  let startX = width/2 - totalWidth/2;
+
+  let y = height - 110;
+
+  for(let i=0;i<slots.length;i++){
+    let x = startX + i*spacing;
+
+    fill(255);
+    rect(x,y,60,60,12);
+
+    if(slots[i]){
+      fill(0);
+      textSize(10);
+      textAlign(CENTER,CENTER);
+      text(slots[i].label, x+30, y+30);
+    }
+  }
+}
+
+function drawControls(){
+
+  textAlign(CENTER, CENTER);
+
+  // LEFT
+  fill(255,150);
+  rect(20, height-80, 60, 60, 12);
+  fill(0);
+  text("<", 50, height-50);
+
+  // RIGHT
+  fill(255,150);
+  rect(width-80, height-80, 60, 60, 12);
+  fill(0);
+  text(">", width-50, height-50);
+}
+
+function updateCamera(){
+  cameraX = player.x - width/2;
+  cameraX = constrain(cameraX,0,worldWidth-width);
+}
+
 function movePlayer(){
-  if(moveLeft) player.velX = -4;
-  else if(moveRight) player.velX = 4;
-  else player.velX = 0;
+  if(moveLeft){
+    player.velX = -5;
+  }
+  else if(moveRight){
+    player.velX = 5;
+  }
+  else{
+    player.velX = 0;
+  }
 }
 
-// PHYSICS
 function applyPhysics(){
   player.velY += gravity;
   player.x += player.velX;
   player.y += player.velY;
+  player.x = constrain(player.x,0,worldWidth-player.w);
 }
 
-// PLATFORM COLLISION
 function checkPlatforms(){
+
   player.onGround = false;
 
   for(let p of platforms){
+
     if(player.x + player.w > p.x &&
-       player.x < p.x + p.w &&
-       player.y + player.h > p.y &&
-       player.y + player.h < p.y + 20 &&
-       player.velY >= 0){
+       player.x < p.x + p.w){
+
+      // landing
+      if(player.y + player.h <= p.y + player.velY &&
+         player.y + player.h + player.velY >= p.y){
 
         player.y = p.y - player.h;
         player.velY = 0;
         player.onGround = true;
+      }
+
+      // hit from below
+      if(player.y >= p.y + p.h &&
+         player.y + player.velY <= p.y + p.h){
+
+        player.y = p.y + p.h;
+        player.velY = 0;
+      }
     }
   }
 }
 
-// DRAW
 function drawPlayer(){
-  fill(selectedAvatar===1?'pink':selectedAvatar===2?'cyan':'lightgreen');
-  rect(player.x,player.y,player.w,player.h);
+  fill(0,200,255);
+  rect(player.x,player.y,player.w,player.h,10);
 }
 
 function drawPlatforms(){
@@ -163,70 +282,44 @@ function drawPlatforms(){
   }
 }
 
-function drawIngredients(){
-  for(let i=ingredients.length-1;i>=0;i--){
-    let ing = ingredients[i];
+function touchStarted(){
 
-    ellipse(ing.x, ing.y, 15);
+  if(gameState === "start"){
+    gameState = "play";
+    return;
+  }
 
-    if(dist(player.x,player.y,ing.x,ing.y)<20){
-      ingredients.splice(i,1);
+  if(gameState === "end"){
+    location.reload();
+    return;
+  }
+
+  let x = touches.length > 0 ? touches[0].x : mouseX;
+
+  let currentTime = millis();
+
+  // double tap jump
+  if(currentTime - lastTap < 300){
+    if(player.onGround){
+      player.velY = jumpForce;
+      player.onGround = false;
     }
+  }
+
+  lastTap = currentTime;
+
+  if(x < width/2){
+    moveLeft = true;
+  } else {
+    moveRight = true;
   }
 }
 
-function drawObstacles(){
-  for(let o of obstacles){
-
-    rect(o.x,o.y,30,30);
-
-    if(player.x < o.x+30 &&
-       player.x+player.w > o.x &&
-       player.y < o.y+30 &&
-       player.y+player.h > o.y){
-        gameState = "end";
-    }
-  }
+function touchEnded(){
+  moveLeft = false;
+  moveRight = false;
 }
 
-// UI
-function drawStart(){
-  fill(255);
-  textAlign(CENTER,CENTER);
-  textSize(30);
-  text("Nykaa SkinQuest", gameWidth/2,gameHeight/2);
-  textSize(16);
-  text("Tap to start", gameWidth/2,gameHeight/2+40);
-}
-
-function drawAvatar(){
-  fill(255);
-  textAlign(CENTER,CENTER);
-  text("Choose Avatar", gameWidth/2,100);
-
-  fill(255,100,150);
-  rect(0,150,gameWidth/3,200);
-
-  fill(100,200,255);
-  rect(gameWidth/3,150,gameWidth/3,200);
-
-  fill(180,255,120);
-  rect(gameWidth*2/3,150,gameWidth/3,200);
-}
-
-function drawEnd(){
-  fill(255);
-  textAlign(CENTER,CENTER);
-  text("Perfect Bundle Unlocked ✨", gameWidth/2,gameHeight/2);
-}
-
-// CONTROLS UI
-function drawControls(){
-  fill(255,50);
-  rect(0,gameHeight-60,gameWidth/3,60);
-  rect(gameWidth*2/3,gameHeight-60,gameWidth/3,60);
-
-  fill(255);
-  text("<",gameWidth/6,gameHeight-30);
-  text(">",gameWidth*5/6,gameHeight-30);
+function windowResized(){
+  resizeCanvas(windowWidth, windowHeight * 0.6);
 }
