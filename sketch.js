@@ -13,10 +13,9 @@ let gameState = "start";
 
 let moveLeft = false;
 let moveRight = false;
-let lastTap = 0;
 
 function setup() {
-  createCanvas(windowWidth, windowHeight * 0.6);
+  createCanvas(windowWidth, windowHeight);
 
   player = {
     x: 100,
@@ -28,29 +27,36 @@ function setup() {
     onGround: false
   };
 
-  // Ground
   platforms.push({x:0,y:height-30,w:worldWidth,h:30});
 
-  // Platforms
-  platforms.push({x:200,y:height-120,w:150,h:20});
-  platforms.push({x:450,y:height-180,w:150,h:20});
-  platforms.push({x:700,y:height-240,w:150,h:20});
-  platforms.push({x:1000,y:height-130,w:150,h:20});
-  platforms.push({x:1300,y:height-190,w:150,h:20});
-  platforms.push({x:1600,y:height-250,w:150,h:20});
+  platforms.push({x:200,y:height-150,w:150,h:20});
+  platforms.push({x:450,y:height-250,w:150,h:20});
+  platforms.push({x:700,y:height-350,w:150,h:20});
+  platforms.push({x:1000,y:height-180,w:150,h:20});
+  platforms.push({x:1300,y:height-280,w:150,h:20});
+  platforms.push({x:1600,y:height-380,w:150,h:20});
 
-  // Makeup products
   products = [
-    {x:230,y:height-150,label:"Primer"},
-    {x:500,y:height-210,label:"Foundation"},
-    {x:730,y:height-270,label:"Concealer"},
-    {x:1050,y:height-160,label:"Blush"},
-    {x:1330,y:height-220,label:"Mascara"},
-    {x:1630,y:height-280,label:"Lipstick"}
+    {x:230,y:height-180,label:"Primer"},
+    {x:500,y:height-280,label:"Foundation"},
+    {x:730,y:height-380,label:"Concealer"},
+    {x:1050,y:height-210,label:"Blush"},
+    {x:1330,y:height-310,label:"Mascara"},
+    {x:1630,y:height-410,label:"Lipstick"}
   ];
 }
 
 function draw() {
+
+  // Force landscape message
+  if(height > width){
+    background(255,240,245);
+    fill(0);
+    textAlign(CENTER,CENTER);
+    textSize(20);
+    text("Rotate your phone to play", width/2, height/2);
+    return;
+  }
 
   if(gameState === "start"){
     drawStartScreen();
@@ -183,7 +189,7 @@ function drawSlots(){
   let totalWidth = spacing * (slots.length - 1);
   let startX = width/2 - totalWidth/2;
 
-  let y = height - 110;
+  let y = height - 120;
 
   for(let i=0;i<slots.length;i++){
     let x = startX + i*spacing;
@@ -215,6 +221,12 @@ function drawControls(){
   rect(width-80, height-80, 60, 60, 12);
   fill(0);
   text(">", width-50, height-50);
+
+  // JUMP (center bottom)
+  fill(255,150);
+  rect(width/2 - 30, height-80, 60, 60, 12);
+  fill(0);
+  text("^", width/2, height-50);
 }
 
 function updateCamera(){
@@ -250,7 +262,6 @@ function checkPlatforms(){
     if(player.x + player.w > p.x &&
        player.x < p.x + p.w){
 
-      // landing
       if(player.y + player.h <= p.y + player.velY &&
          player.y + player.h + player.velY >= p.y){
 
@@ -259,7 +270,6 @@ function checkPlatforms(){
         player.onGround = true;
       }
 
-      // hit from below
       if(player.y >= p.y + p.h &&
          player.y + player.velY <= p.y + p.h){
 
@@ -286,40 +296,44 @@ function touchStarted(){
 
   if(gameState === "start"){
     gameState = "play";
-    return;
+    return false;
   }
 
   if(gameState === "end"){
     location.reload();
-    return;
+    return false;
   }
 
   let x = touches.length > 0 ? touches[0].x : mouseX;
+  let y = touches.length > 0 ? touches[0].y : mouseY;
 
-  let currentTime = millis();
+  // LEFT BUTTON
+  if(x > 20 && x < 80 && y > height-80){
+    moveLeft = true;
+  }
 
-  // double tap jump
-  if(currentTime - lastTap < 300){
+  // RIGHT BUTTON
+  if(x > width-80 && y > height-80){
+    moveRight = true;
+  }
+
+  // JUMP BUTTON
+  if(x > width/2 - 30 && x < width/2 + 30 && y > height-80){
     if(player.onGround){
       player.velY = jumpForce;
       player.onGround = false;
     }
   }
 
-  lastTap = currentTime;
-
-  if(x < width/2){
-    moveLeft = true;
-  } else {
-    moveRight = true;
-  }
+  return false;
 }
 
 function touchEnded(){
   moveLeft = false;
   moveRight = false;
+  return false;
 }
 
 function windowResized(){
-  resizeCanvas(windowWidth, windowHeight * 0.6);
+  resizeCanvas(windowWidth, windowHeight);
 }
