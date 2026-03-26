@@ -19,7 +19,6 @@ function setup() {
   initGame();
 }
 
-// 🔁 reusable setup for resize
 function initGame(){
 
   player = {
@@ -32,29 +31,37 @@ function initGame(){
     onGround: false
   };
 
+  // Platforms (SMOOTHED)
   platforms = [];
+
   platforms.push({x:0,y:height-30,w:worldWidth,h:30});
 
-  platforms.push({x:200,y:height-150,w:150,h:20});
-  platforms.push({x:450,y:height-250,w:150,h:20});
-  platforms.push({x:700,y:height-350,w:150,h:20});
-  platforms.push({x:1000,y:height-180,w:150,h:20});
-  platforms.push({x:1300,y:height-280,w:150,h:20});
-  platforms.push({x:1600,y:height-380,w:150,h:20});
+  platforms.push({x:200,y:height-120,w:120,h:20});
+  platforms.push({x:350,y:height-180,w:120,h:20});
+  platforms.push({x:500,y:height-220,w:120,h:20});
+  platforms.push({x:650,y:height-260,w:120,h:20});
+  platforms.push({x:800,y:height-300,w:120,h:20});
 
+  platforms.push({x:1000,y:height-180,w:120,h:20});
+  platforms.push({x:1150,y:height-220,w:120,h:20});
+  platforms.push({x:1300,y:height-260,w:120,h:20});
+  platforms.push({x:1450,y:height-300,w:120,h:20});
+
+  platforms.push({x:1650,y:height-220,w:150,h:20});
+
+  // Products
   products = [
-    {x:230,y:height-180,label:"Primer"},
-    {x:500,y:height-280,label:"Foundation"},
-    {x:730,y:height-380,label:"Concealer"},
+    {x:230,y:height-150,label:"Primer"},
+    {x:500,y:height-250,label:"Foundation"},
+    {x:730,y:height-350,label:"Concealer"},
     {x:1050,y:height-210,label:"Blush"},
     {x:1330,y:height-310,label:"Mascara"},
-    {x:1630,y:height-410,label:"Lipstick"}
+    {x:1630,y:height-260,label:"Lipstick"}
   ];
 }
 
 function draw() {
 
-  // Landscape lock
   if(height > width){
     background(255,240,245);
     fill(0);
@@ -94,12 +101,14 @@ function draw() {
   drawSlots();
   drawControls();
 
+  handleTouches(); // 🔥 important
+
   if(!slots.includes(null)){
     gameState = "end";
   }
 }
 
-// 🎬 START SCREEN
+// 🎬 START
 function drawStartScreen(){
   background(255,240,245);
 
@@ -119,7 +128,7 @@ function drawStartScreen(){
   text("Tap to Play", width/2, height/2 + 65);
 }
 
-// 🎁 END SCREEN
+// 🎁 END
 function drawEndScreen(){
   background(255,240,245);
 
@@ -192,7 +201,7 @@ function collectProduct(p){
   }
 }
 
-// 🎯 SLOTS (CENTERED)
+// 🎯 SLOTS
 function drawSlots(){
 
   let spacing = 70;
@@ -216,7 +225,7 @@ function drawSlots(){
   }
 }
 
-// 🎮 CONTROLS
+// 🎮 CONTROLS (UPDATED)
 function drawControls(){
 
   textAlign(CENTER, CENTER);
@@ -246,13 +255,48 @@ function drawControls(){
   text("^", width-50, height-120);
 }
 
-// 📷 CAMERA
+// 📱 MULTI-TOUCH HANDLER
+function handleTouches(){
+
+  moveLeft = false;
+  moveRight = false;
+
+  for(let t of touches){
+
+    let x = t.x;
+    let y = t.y;
+
+    if(x > 20 && x < 80 && y > height-80){
+      moveLeft = true;
+    }
+
+    if(x > width-80 && y > height-80){
+      moveRight = true;
+    }
+
+    if(x > 20 && x < 80 && y > height-150 && y < height-90){
+      jump();
+    }
+
+    if(x > width-80 && y > height-150 && y < height-90){
+      jump();
+    }
+  }
+}
+
+function jump(){
+  if(player.onGround){
+    player.velY = jumpForce;
+    player.onGround = false;
+  }
+}
+
+// ⚙️ CORE
 function updateCamera(){
   cameraX = player.x - width/2;
   cameraX = constrain(cameraX,0,worldWidth-width);
 }
 
-// 🧍 MOVEMENT
 function movePlayer(){
   if(moveLeft){
     player.velX = -5;
@@ -265,7 +309,6 @@ function movePlayer(){
   }
 }
 
-// ⚙️ PHYSICS
 function applyPhysics(){
   player.velY += gravity;
   player.x += player.velX;
@@ -273,7 +316,6 @@ function applyPhysics(){
   player.x = constrain(player.x,0,worldWidth-player.w);
 }
 
-// 🧱 COLLISION
 function checkPlatforms(){
 
   player.onGround = false;
@@ -301,7 +343,6 @@ function checkPlatforms(){
   }
 }
 
-// 🎨 DRAW
 function drawPlayer(){
   fill(0,200,255);
   rect(player.x,player.y,player.w,player.h,10);
@@ -314,55 +355,6 @@ function drawPlatforms(){
   }
 }
 
-// 📱 TOUCH CONTROLS
-function touchStarted(){
-
-  if(gameState === "start"){
-    gameState = "play";
-    return false;
-  }
-
-  if(gameState === "end"){
-    location.reload();
-    return false;
-  }
-
-  let x = touches.length > 0 ? touches[0].x : mouseX;
-  let y = touches.length > 0 ? touches[0].y : mouseY;
-
-  if(x > 20 && x < 80 && y > height-80){
-    moveLeft = true;
-  }
-
-  if(x > width-80 && y > height-80){
-    moveRight = true;
-  }
-
-  if(x > 20 && x < 80 && y > height-150 && y < height-90){
-    jump();
-  }
-
-  if(x > width-80 && y > height-150 && y < height-90){
-    jump();
-  }
-
-  return false;
-}
-
-function jump(){
-  if(player.onGround){
-    player.velY = jumpForce;
-    player.onGround = false;
-  }
-}
-
-function touchEnded(){
-  moveLeft = false;
-  moveRight = false;
-  return false;
-}
-
-// 🔄 RESIZE FIX
 function windowResized(){
   resizeCanvas(windowWidth, windowHeight);
   initGame();
