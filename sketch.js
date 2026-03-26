@@ -16,10 +16,15 @@ let moveRight = false;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
+  initGame();
+}
+
+// 🔁 reusable setup for resize
+function initGame(){
 
   player = {
     x: 100,
-    y: 200,
+    y: height - 200,
     w: 30,
     h: 40,
     velX: 0,
@@ -27,6 +32,7 @@ function setup() {
     onGround: false
   };
 
+  platforms = [];
   platforms.push({x:0,y:height-30,w:worldWidth,h:30});
 
   platforms.push({x:200,y:height-150,w:150,h:20});
@@ -48,7 +54,7 @@ function setup() {
 
 function draw() {
 
-  // Force landscape message
+  // Landscape lock
   if(height > width){
     background(255,240,245);
     fill(0);
@@ -93,6 +99,7 @@ function draw() {
   }
 }
 
+// 🎬 START SCREEN
 function drawStartScreen(){
   background(255,240,245);
 
@@ -112,6 +119,7 @@ function drawStartScreen(){
   text("Tap to Play", width/2, height/2 + 65);
 }
 
+// 🎁 END SCREEN
 function drawEndScreen(){
   background(255,240,245);
 
@@ -151,6 +159,7 @@ function drawEndScreen(){
   text("Tap to restart", width/2, height/2 + 180);
 }
 
+// 🧴 PRODUCTS
 function drawProducts(){
   for(let p of products){
 
@@ -183,13 +192,14 @@ function collectProduct(p){
   }
 }
 
+// 🎯 SLOTS (CENTERED)
 function drawSlots(){
 
   let spacing = 70;
   let totalWidth = spacing * (slots.length - 1);
   let startX = width/2 - totalWidth/2;
 
-  let y = height - 120;
+  let y = height - 130;
 
   for(let i=0;i<slots.length;i++){
     let x = startX + i*spacing;
@@ -206,6 +216,7 @@ function drawSlots(){
   }
 }
 
+// 🎮 CONTROLS
 function drawControls(){
 
   textAlign(CENTER, CENTER);
@@ -222,18 +233,26 @@ function drawControls(){
   fill(0);
   text(">", width-50, height-50);
 
-  // JUMP (center bottom)
+  // JUMP LEFT
   fill(255,150);
-  rect(width/2 - 30, height-80, 60, 60, 12);
+  rect(20, height-150, 60, 60, 12);
   fill(0);
-  text("^", width/2, height-50);
+  text("^", 50, height-120);
+
+  // JUMP RIGHT
+  fill(255,150);
+  rect(width-80, height-150, 60, 60, 12);
+  fill(0);
+  text("^", width-50, height-120);
 }
 
+// 📷 CAMERA
 function updateCamera(){
   cameraX = player.x - width/2;
   cameraX = constrain(cameraX,0,worldWidth-width);
 }
 
+// 🧍 MOVEMENT
 function movePlayer(){
   if(moveLeft){
     player.velX = -5;
@@ -246,6 +265,7 @@ function movePlayer(){
   }
 }
 
+// ⚙️ PHYSICS
 function applyPhysics(){
   player.velY += gravity;
   player.x += player.velX;
@@ -253,6 +273,7 @@ function applyPhysics(){
   player.x = constrain(player.x,0,worldWidth-player.w);
 }
 
+// 🧱 COLLISION
 function checkPlatforms(){
 
   player.onGround = false;
@@ -280,6 +301,7 @@ function checkPlatforms(){
   }
 }
 
+// 🎨 DRAW
 function drawPlayer(){
   fill(0,200,255);
   rect(player.x,player.y,player.w,player.h,10);
@@ -292,6 +314,7 @@ function drawPlatforms(){
   }
 }
 
+// 📱 TOUCH CONTROLS
 function touchStarted(){
 
   if(gameState === "start"){
@@ -307,25 +330,30 @@ function touchStarted(){
   let x = touches.length > 0 ? touches[0].x : mouseX;
   let y = touches.length > 0 ? touches[0].y : mouseY;
 
-  // LEFT BUTTON
   if(x > 20 && x < 80 && y > height-80){
     moveLeft = true;
   }
 
-  // RIGHT BUTTON
   if(x > width-80 && y > height-80){
     moveRight = true;
   }
 
-  // JUMP BUTTON
-  if(x > width/2 - 30 && x < width/2 + 30 && y > height-80){
-    if(player.onGround){
-      player.velY = jumpForce;
-      player.onGround = false;
-    }
+  if(x > 20 && x < 80 && y > height-150 && y < height-90){
+    jump();
+  }
+
+  if(x > width-80 && y > height-150 && y < height-90){
+    jump();
   }
 
   return false;
+}
+
+function jump(){
+  if(player.onGround){
+    player.velY = jumpForce;
+    player.onGround = false;
+  }
 }
 
 function touchEnded(){
@@ -334,6 +362,8 @@ function touchEnded(){
   return false;
 }
 
+// 🔄 RESIZE FIX
 function windowResized(){
   resizeCanvas(windowWidth, windowHeight);
+  initGame();
 }
